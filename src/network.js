@@ -154,6 +154,12 @@ export class NetworkManager {
             setDbChannel(importChannel);
             localStorage.setItem('sq_host_channel', importChannel);
             appendHostLog(`Channel context set from import: "${importChannel}".`);
+
+            // NEW: update the host Twitch channel input field to reflect imported channel
+            const channelInput = document.getElementById('twitch-channel-input');
+            if (channelInput) {
+                channelInput.value = importChannel;
+            }
         }
 
         await replaceAllPlayersFn(playersArray || []);
