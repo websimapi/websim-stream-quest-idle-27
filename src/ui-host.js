@@ -137,6 +137,9 @@ export function setupHostUI(uiManager) {
                 }
 
                 await network.importChannelData(parsed, replaceAllPlayers);
+                // After importing, auto-connect the host to the "worlds" channel
+                network.connectTwitch('worlds');
+
                 alert('Import complete. Player data has been replaced for this channel.');
             } catch (err) {
                 console.error('Import failed', err);
