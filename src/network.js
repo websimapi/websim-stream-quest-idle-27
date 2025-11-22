@@ -131,16 +131,37 @@ export class NetworkManager {
     async exportChannelData() {
         if (!this.isHost) return [];
         const players = await getAllPlayers();
-        appendHostLog(`Exported ${players.length} players for current channel.`);
-        return players;
+        const channel = localStorage.getItem('sq_host_channel') || null;
+        appendHostLog(
+            `Exported ${players.length} players for current channel${channel ? ` "${channel}"` : ''}.`
+        );
+        return { channel, players };
     }
 
-    async importChannelData(playersArray, replaceAllPlayersFn) {
+    async importChannelData(importPayload, replaceAllPlayersFn) {
         if (!this.isHost) return;
         if (typeof replaceAllPlayersFn !== 'function') return;
 
+        const playersArray = Array.isArray(importPayload)
+            ? importPayload
+            : importPayload?.players || [];
+        const importChannel = Array.isArray(importPayload)
+            ? null
+            : importPayload?.channel || null;
+
+        // If the import specifies a channel, switch DB context and remember it
+        if (importChannel) {
+            setDbChannel(importChannel);
+            localStorage.setItem('sq_host_channel', importChannel);
+            appendHostLog(`Channel context set from import: "${importChannel}".`);
+        }
+
         await replaceAllPlayersFn(playersArray || []);
-        appendHostLog(`Imported ${playersArray?.length || 0} players for current channel (overwrote existing data).`);
+        appendHostLog(
+            `Imported ${playersArray?.length || 0} players for current channel${
+                importChannel ? ` "${importChannel}"` : ''
+            } (overwrote existing data).`
+        );
         await this.refreshPlayerList();
 
         // Broadcast updates to connected clients and local UI
@@ -164,6 +185,11 @@ export class NetworkManager {
 
             // 3. Update Host Spectator View (if currently inspecting this user)
             window.dispatchEvent(new CustomEvent('sq:player_update', { detail: player }));
+        }
+
+        // After import, auto-connect to the channel specified in the file (if any)
+        if (importChannel) {
+            this.connectTwitch(importChannel);
         }
     }
 
